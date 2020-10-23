@@ -4,6 +4,7 @@ import { makeStyles } from '@material-ui/core/styles'
 import { MoreVert, Chat, DonutLarge, SearchOutlined } from '@material-ui/icons'
 import SidebarChat from './SidebarChat'
 import db from '../firebase'
+import { useStateValue } from '../StateProvider'
 
 
 const useStyles = makeStyles ({
@@ -60,8 +61,9 @@ const useStyles = makeStyles ({
 function Sidebar() {
   const classes = useStyles() 
   const [chats, setChats] = useState([])
-
-  useEffect(() => {
+  const [{ user }, dispatch] = useStateValue()
+  
+  const unsubscribed = useEffect(() => {
     db.collection('chats').onSnapshot((snapshot) => 
       setChats(snapshot.docs.map((doc) => ({
           id: doc.id,
@@ -69,12 +71,15 @@ function Sidebar() {
         }))
       )
     )
+      return () => {
+        unsubscribed()
+      }
   }, [])
 
   return (
     <div className={classes.sidebar}>
       <div className={classes.sidebarHeader}>
-        <Avatar />
+        <Avatar src={user?.photoURL}/>
         <div className={classes.sidebarHeaderRight}>
           <IconButton>
             <DonutLarge />

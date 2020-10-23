@@ -1,7 +1,10 @@
-import React from 'react';
+import React , { useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles'
 import Sidebar from './components/Sidebar'
 import Chat from './components/Chat';
+import { BrowserRouter as Router, Route, Switch } from 'react-router-dom'
+import Login from './components/Login';
+import { useStateValue } from './StateProvider';
 
 const useStyles = makeStyles({
   app:{
@@ -21,12 +24,27 @@ const useStyles = makeStyles({
 
 function App() {
   const classes = useStyles()
+  const [{ user }, dispatch] = useStateValue()
+
   return (
     <div className={classes.app}>      
-      <div className={classes.appBody}>
-      <Sidebar />
-      <Chat />
+      {!user ? (
+        <Login />
+      ) :  (
+        <div className={classes.appBody}>
+        <Router>
+          <Sidebar />
+          <Switch>
+            <Route exact path="/chats/:chatId">
+              <Chat />
+            </Route>
+            <Route exact path="/">
+              <Chat />
+            </Route>
+          </Switch>
+        </Router>
       </div>
+      )}
     </div>
   );
 }

@@ -3,7 +3,11 @@ import { makeStyles } from '@material-ui/core/styles'
 import Avatar from '@material-ui/core/Avatar'
 import { List, ListItem, ListItemText, IconButton, Typography } from '@material-ui/core'
 import { AttachFile , InsertEmoticon, Mic, MoreVert, SearchOutlined, Send} from '@material-ui/icons'
+import { useParams } from 'react-router-dom'
 import clsx from 'clsx'
+import db from '../firebase'
+import { useStateValue } from '../StateProvider'
+import firebase from 'firebase'
 
   const useStyles = makeStyles({
     chat: {
@@ -42,7 +46,8 @@ import clsx from 'clsx'
       padding: '10px',
       borderRadius: '10px',
       width: 'fit-content',
-      backgroundColor: '#ffffff'
+      backgroundColor: '#ffffff',
+      marginBottom: '15px'
     },
     chatMessageContent: {
       display: 'flex',
@@ -86,15 +91,41 @@ function Chat() {
   const classes = useStyles()
   const [seed, setSeed] = useState('')
   const [input, setInput] = useState('')
+  const { chatId } = useParams()
+  const [chatName, setChatName] = useState('')
+  const [messages, setMessages] = useState([])
+  const [{ user }, dispatch] = useStateValue()
+
+  useEffect(() => {
+    if(chatId) {
+      db.collection('chats')
+        .doc(chatId)
+        .onSnapshot((snapshot) => 
+        (setChatName(snapshot.data().name)),
+
+        db.collection('chats')
+          .doc(chatId)
+          .collection('messages')
+          .orderBy('timestamp', 'asc')
+          .onSnapshot(snapshot =>
+            setMessages(snapshot.docs.map(doc => doc.data()))
+        )
+      )
+    }
+  }, [chatId])
 
   useEffect(() => {
     setSeed(Math.floor(Math.random() * 5000))
-  }, [])
+  }, [chatId])
 
   const sendMessage = e => {
     e.preventDefault()
 
-    console.log('you typed => ', input )
+    db.collection('chats').doc(chatId).collection('messages').add({
+      message: input,
+      name: user.displayName,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    })
 
     setInput('')
   }
@@ -105,10 +136,10 @@ function Chat() {
 
         <List>
           <ListItem>
-            <Avatar src={`https://avatars.dicebear.com/api/avataaars/${seed}.svg`} />
+            <Avatar src={`https://avatars.dicebear.com/api/bottts/${seed}.svg`} />
               <ListItemText primary={
                 <Typography variant="h5" color="initial">
-                room name
+                {chatName}
                 </Typography>}  
                 secondary="las seen at ..."/>
           </ListItem>
@@ -128,19 +159,21 @@ function Chat() {
         </div>
       </div>
       <div className={classes.chatBody}>
-        <div className={clsx(classes.chatMessage, true && classes.chatMessageReciever)}>
-          <Typography className={classes.messageHeader} variant="body2" color="initial">
-            alex rodriguez
-          </Typography>
+        {messages.map((message) => (
+          <div  className={clsx(classes.chatMessage, message.name === user.displayName ? classes.chatMessageReciever: '')}>
+            <Typography className={classes.messageHeader} variant="body2" color="initial">
+              {message.name}
+            </Typography>
           <div className={classes.chatMessageContent}>
             <Typography variant="body1" color="initial">
-              hola
+              {message.message}
             </Typography>
             <Typography className={classes.timeStamp} variant="caption" color="textSecondary">
-              3:51pm
-            </Typography>
+              {new Date(message.timestamp?.toDate()).toUTCString()}
+            </Typography> 
           </div>
         </div>
+        ))}
       </div>
       <div className={classes.chatFooter}>
         <InsertEmoticon />
